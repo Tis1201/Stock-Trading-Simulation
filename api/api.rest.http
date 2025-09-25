@@ -1,0 +1,25 @@
+###GET HELLO
+GET http://localhost:3000
+
+###GET METRIC
+GET http://localhost:3000/metrics
+
+###LOGIN
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{ 
+    "email": "user1@email.com",
+    "password_hash": "$2b$10$hashedpassword3"
+}
+
+### get user
+GET http://localhost:3000/user
+Content-Type: application/json
+
+### get user by id
+GET http://localhost:3000/user/1
+
+### delete user
+DELETE http://localhost:3000/user/1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXIxQGVtYWlsLmNvbSIsInN1YiI6MywiaWF0IjoxNzU4Nzg3Mzc1LCJleHAiOjE3NTg3ODc0MzV9.-wpqInrbV6TnqVK3zzxr_vtLB3G1EBxlzs2SP0f4Vy0
