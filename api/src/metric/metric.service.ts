@@ -8,7 +8,7 @@ import {
 
 @Injectable()
 export class MetricService {
-  private readonly registry= new Registry();
+  private readonly registry = new Registry();
   private readonly httpRequestCounter: Counter<string>;
   private readonly httpRequestDuration: Histogram<string>;
 

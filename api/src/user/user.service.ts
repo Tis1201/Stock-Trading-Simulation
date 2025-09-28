@@ -21,7 +21,7 @@ export class UserService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return await this.prisma.user.findUnique({
+    return this.prisma.user.findUnique({
       where: { email },
     });
   }
@@ -34,7 +34,7 @@ export class UserService {
     return `This action removes a #${id} user`;
   }
 
-async getRolePermissionByUserId(userId: number) {
+  async getRolePermissionByUserId(userId: number) {
     const userWithRoles = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -58,7 +58,6 @@ async getRolePermissionByUserId(userId: number) {
       throw new Error('User not found');
     }
 
-    // gom dữ liệu cho dễ dùng: trả về danh sách role + permissions
     return userWithRoles.roles.map((userRole) => ({
       role: {
         id: userRole.role.id,

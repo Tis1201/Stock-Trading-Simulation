@@ -12,6 +12,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PermissionGuard } from './common/guards/permission.guard';
     UserModule,
     AuthModule,
     PrismaModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [
