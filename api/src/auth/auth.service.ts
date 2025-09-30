@@ -4,6 +4,7 @@ import { UserService } from 'src/user/user.service';
 import { LoginDto } from './dto/login.dto';
 import { ErrorFactory } from 'src/common/errors';
 import { RedisService } from 'src/redis/redis.service';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -13,21 +14,23 @@ export class AuthService {
     private readonly redisService: RedisService,
   ) {}
 
-  async createAccessToken(payload: any) {
+  createAccessToken(payload: any) {
     return this.jwtService.sign(payload, {
       expiresIn: '15m',
       secret: process.env.JWT_SECRET,
     });
   }
 
-  async createRefreshToken(payload: any) {
+  createRefreshToken(payload: any) {
     return this.jwtService.sign(payload, {
       expiresIn: '7d',
       secret: process.env.JWT_SECRET,
     });
   }
 
-  async login(loginDto: LoginDto): Promise<{ access_token: string }> {
+  async login(
+    loginDto: LoginDto,
+  ): Promise<{ access_token: string; sessionId: string }> {
     const user = await this.userService.findByEmail(loginDto.email);
     if (!user) throw ErrorFactory.NotFoundError('User not found');
     if (user?.password_hash !== loginDto.password_hash)
@@ -49,12 +52,20 @@ export class AuthService {
     );
 
     const payload = {
-      email: user.email,
       sub: user.id,
       role: allRoles,
       permission: allPermissions,
     };
+    const access_token = this.createAccessToken(payload);
+    const refresh_token = this.createRefreshToken(payload);
 
-    return { access_token: this.jwtService.sign(payload) };
+    const sessionId = randomUUID();
+    await this.redisService.set(
+      `session:${sessionId}`,
+      refresh_token,
+      60 * 60 * 24 * 7,
+    );
+
+    return { access_token, sessionId };
   }
 }

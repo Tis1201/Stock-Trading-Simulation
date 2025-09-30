@@ -1,8 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// ============================
+// Prisma Client & Datasource
+// ============================
 
 generator client {
   provider = "prisma-client-js"
@@ -14,79 +12,126 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================
+// Enums
+// ============================
+
+enum RoleName {
+  USER
+  ADMIN
+}
+
+enum MarketMode {
+  PRIVATE
+  PUBLIC
+}
+
+enum PriceSource {
+  HISTORICAL // từ StockPrice (data thật)
+  SIM_PRIVATE // mô phỏng riêng cho user
+  SIM_PUBLIC // mô phỏng dùng chung
+}
+
+enum DistType {
+  GBM // geometric Brownian motion
+  MEAN_REVERT // Ornstein–Uhlenbeck
+  BOOTSTRAP // block bootstrap từ lịch sử
+  CUSTOM
+}
+
+enum IndicatorType {
+  SMA
+  EMA
+  RSI
+  MACD
+  BOLLINGER
+}
+
+// ============================
+// Core AuthZ / AuthN
+// ============================
+
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique @db.VarChar(255)
-  password_hash String @db.VarChar(255)
-  first_name String   @db.VarChar(100)
-  last_name  String   @db.VarChar(100)
-  phone      String?  @db.VarChar(20)
+  id                Int       @id @default(autoincrement())
+  email             String    @unique @db.VarChar(255)
+  password_hash     String    @db.VarChar(255)
+  first_name        String    @db.VarChar(100)
+  last_name         String    @db.VarChar(100)
+  phone             String?   @db.VarChar(20)
   email_verified_at DateTime?
-  is_active   Boolean @default(true)
-  last_login_at DateTime?
-  login_attemps  Int @default(0)
-  locked_until DateTime?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now())
-  
-  roles UserRole[]
+  is_active         Boolean   @default(true)
+  last_login_at     DateTime?
+  login_attemps     Int       @default(0)
+  locked_until      DateTime?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @default(now())
+
+  roles         UserRole[]
   notifications Notification[]
-  watchlists Watchlist[]
-  backtestJobs BacktestJob[]
-  auditLogs AuditLog[]
-  strategies Strategy[]
+  watchlists    Watchlist[]
+  backtestJobs  BacktestJob[]
+  auditLogs     AuditLog[]
+  strategies    Strategy[]
+  UserPortfolio UserPortfolio[]
+  Order         Order[]
+  UserBalance   UserBalance?
+
+  // Simulation / Sessions ownership (PRIVATE sessions and data)
+  privateSessions MarketSession[]    @relation("PrivateSessions")
+  simPricesOwned  SimulatedPrice[]
+  simConfigsOwned SimulationConfig[]
+
+  BacktestJob BacktestJob[] @relation("BacktestOwner")
 }
 
 model Role {
-  id Int @id @default(autoincrement())
-  name String @unique @db.VarChar(50)
-  display_name String @db.VarChar(100)
-  description String?
-  is_active   Boolean @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  name         String   @unique @db.VarChar(50)
+  display_name String   @db.VarChar(100)
+  description  String?
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now())
 
   permissions RolePermission[]
-  users UserRole[]
-
-
+  users       UserRole[]
 }
 
 model Permissions {
-  id Int @id @default(autoincrement())
-  name String @unique @db.VarChar(100)
-  display_name String @db.VarChar(150)
-  description String?
-  resource String @db.VarChar(50)
-  action String @db.VarChar(50)
-  is_active   Boolean @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  name         String   @unique @db.VarChar(100)
+  display_name String   @db.VarChar(150)
+  description  String?
+  resource     String   @db.VarChar(50)
+  action       String   @db.VarChar(50)
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now())
 
   roles RolePermission[]
 }
 
 model RolePermission {
-  id Int @id @default(autoincrement())
-  role_id Int
+  id            Int      @id @default(autoincrement())
+  role_id       Int
   permission_id Int
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now())
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now())
 
-  role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+  role       Role        @relation(fields: [role_id], references: [id], onDelete: Cascade)
   permission Permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade)
 
   @@unique([role_id, permission_id])
 }
 
 model UserRole {
-  id Int @id @default(autoincrement())
-  user_id Int
-  role_id Int
+  id          Int       @id @default(autoincrement())
+  user_id     Int
+  role_id     Int
   assigned_by Int
   assigned_at DateTime?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now())
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @default(now())
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
   role Role @relation(fields: [role_id], references: [id], onDelete: Cascade)
@@ -95,158 +140,201 @@ model UserRole {
 }
 
 model Notification {
-  id Int @id @default(autoincrement())
-  user_id Int
-  title String
-  type String @db.VarChar(50)
-  message String @db.Text
-  is_read Boolean @default(false)
-  data Json?
-  read_at DateTime?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @default(now())
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  title      String
+  type       String    @db.VarChar(50)
+  message    String    @db.Text
+  is_read    Boolean   @default(false)
+  data       Json?
+  read_at    DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @default(now())
 
   user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
-model Watchlist {
-  id Int @id @default(autoincrement())
-  user_id Int
-  name String @db.VarChar(100)
-  description String?
-  is_default Boolean 
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now())
+model AuditLog {
+  id            Int      @id @default(autoincrement())
+  user_id       Int
+  action        String   @db.VarChar(100)
+  resource_type String   @db.VarChar(100)
+  resource_id   Int?
+  old_value     Json?
+  new_value     Json?
+  ip_address    String?  @db.VarChar(45)
+  user_agent    String?  @db.VarChar(255)
+  created_at    DateTime @default(now())
 
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+// ============================
+// Watchlist
+// ============================
+
+model Watchlist {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  name        String   @db.VarChar(100)
+  description String?
+  is_default  Boolean
+  created_at  DateTime @default(now())
+  updated_at  DateTime @default(now())
+
+  user  User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
   items WatchlistStock[]
 }
 
 model WatchlistStock {
-  id Int @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   watchlist_id Int
-  stock_symbol String @db.VarChar(10)
-  added_at DateTime @default(now())
+  stock_symbol String   @db.VarChar(10)
+  added_at     DateTime @default(now())
 
   watchlist Watchlist @relation(fields: [watchlist_id], references: [id], onDelete: Cascade)
-  stock Stock @relation(fields: [stock_symbol], references: [symbol], onDelete: Cascade)
+  stock     Stock     @relation(fields: [stock_symbol], references: [symbol], onDelete: Cascade)
 
   @@unique([watchlist_id, stock_symbol])
 }
 
-model BacktestJob{
-  id Int @id @default(autoincrement())
-  user_id Int
-  strategy_id Int
-  status String @db.VarChar(50)
-  start_date DateTime?
-  end_date DateTime?
-  initial_capital Decimal @db.Decimal(15, 2)
-  commission_rate   Decimal @db.Decimal(5, 4)
-  job_config Json
-  total_return      Decimal? @db.Decimal(10, 4)
-  annual_return     Decimal? @db.Decimal(10, 4)
-  max_drawdown      Decimal? @db.Decimal(10, 4)
-  sharpe_ratio      Decimal? @db.Decimal(8, 4)
-  win_rate          Decimal? @db.Decimal(5, 4)
-  total_trades Int?
-  profitable_trades Int?
-  error_message String?
-  started_at DateTime @default(now())
-  completed_at DateTime?
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now())
+// ============================
+// Strategy & Backtesting
+// ============================
 
- 
-
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  strategy Strategy @relation(fields: [strategy_id], references: [id], onDelete: Cascade)
-
-  trades BacktestTrade[]
-}
-
-model AuditLog{
-  id Int @id @default(autoincrement())
-  user_id Int
-  action String @db.VarChar(100)
-  resource_type String @db.VarChar(100)
-  resource_id Int?
-  old_value Json?
-  new_value Json?
-  ip_address String? @db.VarChar(45)
-  user_agent String? @db.VarChar(255)
-  created_at DateTime @default(now())
-
-  user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
-}
-
-model Strategy{
-  id Int @id @default(autoincrement())
-  user_id Int
-  name String @db.VarChar(100)
-  description String?
+model Strategy {
+  id              Int      @id @default(autoincrement())
+  user_id         Int
+  name            String   @db.VarChar(100)
+  description     String?
   strategy_config Json
-  is_public Boolean @default(false)
-  is_active Boolean @default(true)
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now())
+  is_public       Boolean  @default(false)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now())
 
   backtestJobs BacktestJob[]
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  StrategyRule StrategyRule[]
 }
 
-model BacktestTrade{
-  id Int @id @default(autoincrement())
+model StrategyRule {
+  id          Int      @id @default(autoincrement())
+  strategy_id Int
+  rule_order  Int // Thứ tự thực hiện
+  condition   Json // {indicator: "RSI", operator: "<", value: 30}
+  action      String   @db.VarChar(20) // "buy", "sell", "hold"
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  strategy Strategy @relation(fields: [strategy_id], references: [id], onDelete: Cascade)
+
+  @@index([strategy_id, rule_order])
+}
+
+model BacktestJob {
+  id                Int         @id @default(autoincrement())
+  user_id           Int
+  strategy_id       Int
+  status            String      @db.VarChar(50)
+  // Khoảng dữ liệu dùng để backtest:
+  data_from         DateTime?
+  data_to           DateTime?
+  // Nguồn dữ liệu backtest:
+  price_source      PriceSource @default(HISTORICAL)
+  // Gắn với session mô phỏng nào (khi price_source = SIM_PRIVATE / SIM_PUBLIC):
+  session_id        Int?
+  owner_user_id     Int?
+  // Cấu hình & tham số khởi tạo:
+  initial_capital   Decimal     @db.Decimal(15, 2)
+  commission_rate   Decimal     @db.Decimal(5, 4)
+  job_config        Json
+  // Metrics kết quả:
+  total_return      Decimal?    @db.Decimal(10, 4)
+  annual_return     Decimal?    @db.Decimal(10, 4)
+  max_drawdown      Decimal?    @db.Decimal(10, 4)
+  sharpe_ratio      Decimal?    @db.Decimal(8, 4)
+  win_rate          Decimal?    @db.Decimal(5, 4)
+  total_trades      Int?
+  profitable_trades Int?
+  error_message     String?
+  started_at        DateTime    @default(now())
+  completed_at      DateTime?
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @default(now())
+
+  user     User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  strategy Strategy       @relation(fields: [strategy_id], references: [id], onDelete: Cascade)
+  session  MarketSession? @relation(fields: [session_id], references: [id])
+  owner    User?          @relation("BacktestOwner", fields: [owner_user_id], references: [id])
+
+  trades BacktestTrade[]
+
+  @@index([price_source, session_id, user_id, created_at])
+}
+
+model BacktestTrade {
+  id              Int      @id @default(autoincrement())
   backtest_job_id Int
-  stock_symbol String @db.VarChar(10)
-  trade_type String @db.VarChar(10) // "buy" or "sell"
-  trade_date DateTime
-  quantity Int
-  price_per_share  Decimal @db.Decimal(10, 2)
-  commission       Decimal @default(0) @db.Decimal(10, 2)
-  total_amount     Decimal @db.Decimal(15, 2)
-  portfolio_value  Decimal? @db.Decimal(15, 2)
-  created_at DateTime @default(now())
+  stock_symbol    String   @db.VarChar(10)
+  trade_type      String   @db.VarChar(10) // "buy" or "sell"
+  trade_date      DateTime
+  quantity        Int
+  price_per_share Decimal  @db.Decimal(10, 2)
+  commission      Decimal  @default(0) @db.Decimal(10, 2)
+  total_amount    Decimal  @db.Decimal(15, 2)
+  portfolio_value Decimal? @db.Decimal(15, 2)
+  created_at      DateTime @default(now())
 
   backtestJob BacktestJob @relation(fields: [backtest_job_id], references: [id], onDelete: Cascade)
-  Stock Stock @relation(fields: [stock_symbol], references: [symbol], onDelete: Cascade)
+  Stock       Stock       @relation(fields: [stock_symbol], references: [symbol], onDelete: Cascade)
 
   @@index([backtest_job_id])
 }
 
-model Stock{
-  id Int @id @default(autoincrement())
-  symbol String @unique @db.VarChar(10)
-  company_name String @db.VarChar(100)
-  exchange String @db.VarChar(50)
-  sector String? @db.VarChar(100)
-  industry String? @db.VarChar(100)
-  market_cap Decimal? @db.Decimal(20, 2)
-  description String? @db.Text
-  is_active Boolean @default(true)
-  listed_at DateTime?
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now())
+// ============================
+// Market / Price / Indicators
+// ============================
 
-  watchlistStocks WatchlistStock[]
-  backtestTrades BacktestTrade[]
-  stockPrices StockPrice[]
-  tenicalIndicators TechnicalIndicator[]
+model Stock {
+  id           Int       @id @default(autoincrement())
+  symbol       String    @unique @db.VarChar(10)
+  company_name String    @db.VarChar(100)
+  exchange     String    @db.VarChar(50)
+  sector       String?   @db.VarChar(100)
+  industry     String?   @db.VarChar(100)
+  market_cap   Decimal?  @db.Decimal(20, 2)
+  description  String?   @db.Text
+  is_active    Boolean   @default(true)
+  listed_at    DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @default(now())
 
+  watchlistStocks   WatchlistStock[]
+  backtestTrades    BacktestTrade[]
+  stockPrices       StockPrice[]
+  tenicalIndicators TechnicalIndicator[] // giữ nguyên tên trường của bạn để không phá code cũ
+  UserPortfolio     UserPortfolio[]
+  BotPortfolio      BotPortfolio[]
+  Order             Order[]
+  Trade             Trade[]
+  SimulatedPrice    SimulatedPrice[]
+  MarketStats       MarketStats[]
+  simConfigs        SimulationConfig[]
 }
 
-model StockPrice{
-  id Int @id @default(autoincrement())
-  stock_symbol String @db.VarChar(10)
-  trade_date DateTime
-  open_price           Decimal @db.Decimal(10, 2)
-  high_price           Decimal @db.Decimal(10, 2)
-  low_price            Decimal @db.Decimal(10, 2)
-  close_price          Decimal @db.Decimal(10, 2)
+model StockPrice {
+  id                   Int      @id @default(autoincrement())
+  stock_symbol         String   @db.VarChar(10)
+  trade_date           DateTime
+  open_price           Decimal  @db.Decimal(10, 2)
+  high_price           Decimal  @db.Decimal(10, 2)
+  low_price            Decimal  @db.Decimal(10, 2)
+  close_price          Decimal  @db.Decimal(10, 2)
   volume               BigInt
   adjusted_close_price Decimal? @db.Decimal(10, 2)
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now())
+  created_at           DateTime @default(now())
+  updated_at           DateTime @default(now())
 
   Stock Stock @relation(fields: [stock_symbol], references: [symbol], onDelete: Cascade)
 
@@ -254,20 +342,307 @@ model StockPrice{
   @@index([trade_date])
 }
 
-model TechnicalIndicator{
-  id Int @id @default(autoincrement())
-  stock_symbol String @db.VarChar(10)
-  trade_date DateTime
-  indicator_type String @db.VarChar(50) // e.g., "SMA", "EMA", "RSI"
-  period_days Int
-  value_1 Decimal @db.Decimal(15, 6)
-  value_2 Decimal? @db.Decimal(15, 6)
-  value_3 Decimal? @db.Decimal(15, 6)
-  metadata Json?
-  created_at DateTime @default(now())
-  updated_at DateTime @default(now())
+model TechnicalIndicator {
+  id             Int           @id @default(autoincrement())
+  stock_symbol   String        @db.VarChar(10)
+  trade_date     DateTime
+  indicator_type IndicatorType // enum thay cho String
+  period_days    Int
+  value_1        Decimal       @db.Decimal(15, 6)
+  value_2        Decimal?      @db.Decimal(15, 6)
+  value_3        Decimal?      @db.Decimal(15, 6)
+  metadata       Json?
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @default(now())
 
   Stock Stock @relation(fields: [stock_symbol], references: [symbol], onDelete: Cascade)
 
   @@index([stock_symbol, indicator_type, period_days, trade_date])
+}
+
+// ============================
+// Simulation (Sessions, Prices, Stats, Config)
+// ============================
+
+model MarketSession {
+  id               Int        @id @default(autoincrement())
+  session_date     DateTime
+  mode             MarketMode
+  owner_user_id    Int? // PRIVATE thì có owner; PUBLIC thì null
+  start_time       DateTime
+  end_time         DateTime?
+  is_active        Boolean    @default(true)
+  simulation_speed Int        @default(1) // 1x, 2x, 5x speed
+  current_time     DateTime
+  created_at       DateTime   @default(now())
+
+  owner            User?              @relation("PrivateSessions", fields: [owner_user_id], references: [id])
+  prices           SimulatedPrice[]
+  stats            MarketStats[]
+  orders           Order[]
+  trades           Trade[]
+  BacktestJob      BacktestJob[]
+  SimulationConfig SimulationConfig[]
+
+  @@index([mode, is_active])
+  @@index([owner_user_id, session_date])
+}
+
+model SimulatedPrice {
+  id              Int         @id @default(autoincrement())
+  stock_symbol    String      @db.VarChar(10)
+  session_id      Int
+  owner_user_id   Int?
+  simulation_time DateTime
+  price           Decimal     @db.Decimal(10, 2)
+  volume          Int
+  price_change    Decimal     @db.Decimal(8, 4) // %
+  volatility      Decimal     @db.Decimal(8, 4)
+  source          PriceSource
+  created_at      DateTime    @default(now())
+
+  stock   Stock         @relation(fields: [stock_symbol], references: [symbol])
+  session MarketSession @relation(fields: [session_id], references: [id])
+  owner   User?         @relation(fields: [owner_user_id], references: [id])
+
+  @@unique([stock_symbol, session_id, simulation_time])
+  @@index([session_id, stock_symbol, simulation_time])
+}
+
+model MarketStats {
+  id               Int      @id @default(autoincrement())
+  stock_symbol     String   @db.VarChar(10)
+  session_id       Int
+  date             DateTime
+  total_volume     BigInt
+  total_trades     Int
+  avg_price        Decimal  @db.Decimal(10, 2)
+  high_price       Decimal  @db.Decimal(10, 2)
+  low_price        Decimal  @db.Decimal(10, 2)
+  price_volatility Decimal  @db.Decimal(8, 4)
+
+  stock   Stock         @relation(fields: [stock_symbol], references: [symbol])
+  session MarketSession @relation(fields: [session_id], references: [id])
+
+  @@unique([stock_symbol, session_id, date])
+  @@index([session_id, date])
+}
+
+model SimulationConfig {
+  id            Int      @id @default(autoincrement())
+  session_id    Int
+  stock_symbol  String   @db.VarChar(10)
+  owner_user_id Int?
+  dist_type     DistType
+  seed          Int?
+  params        Json?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @default(now())
+
+  session MarketSession @relation(fields: [session_id], references: [id])
+  stock   Stock         @relation(fields: [stock_symbol], references: [symbol])
+  owner   User?         @relation(fields: [owner_user_id], references: [id])
+
+  @@unique([session_id, stock_symbol, owner_user_id])
+  @@index([stock_symbol, session_id])
+}
+
+// ============================
+// Trading (Bots, Portfolios, Orders, Trades)
+// ============================
+
+model TradingBot {
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(100)
+  bot_type        String   @db.VarChar(50) // "market_maker", "trend_follower", "random"
+  config          Json // Trading strategy config
+  initial_balance Decimal  @db.Decimal(15, 2)
+  current_balance Decimal  @db.Decimal(15, 2)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now())
+
+  portfolios BotPortfolio[]
+  orders     Order[]
+}
+
+model UserPortfolio {
+  id             Int      @id @default(autoincrement())
+  user_id        Int
+  stock_symbol   String   @db.VarChar(10)
+  quantity       Int      @default(0)
+  avg_price      Decimal  @db.Decimal(10, 2)
+  total_value    Decimal  @db.Decimal(15, 2)
+  unrealized_pnl Decimal  @db.Decimal(15, 2)
+  updated_at     DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  stock Stock @relation(fields: [stock_symbol], references: [symbol])
+
+  @@unique([user_id, stock_symbol])
+}
+
+model BotPortfolio {
+  id           Int      @id @default(autoincrement())
+  bot_id       Int
+  stock_symbol String   @db.VarChar(10)
+  quantity     Int      @default(0)
+  avg_price    Decimal  @db.Decimal(10, 2)
+  total_value  Decimal  @db.Decimal(15, 2)
+  updated_at   DateTime @default(now())
+
+  bot   TradingBot @relation(fields: [bot_id], references: [id], onDelete: Cascade)
+  stock Stock      @relation(fields: [stock_symbol], references: [symbol])
+
+  @@unique([bot_id, stock_symbol])
+}
+
+model Order {
+  id              Int       @id @default(autoincrement())
+  session_id      Int
+  user_id         Int?
+  bot_id          Int?
+  stock_symbol    String    @db.VarChar(10)
+  order_type      String    @db.VarChar(20) // "market", "limit", "stop"
+  side            String    @db.VarChar(10) // "buy", "sell"
+  quantity        Int
+  price           Decimal?  @db.Decimal(10, 2)
+  status          String    @db.VarChar(20) // "pending", "filled", "cancelled", "partial"
+  filled_quantity Int       @default(0)
+  filled_price    Decimal?  @db.Decimal(10, 2)
+  commission      Decimal   @default(0) @db.Decimal(10, 2)
+  created_at      DateTime  @default(now())
+  filled_at       DateTime?
+
+  session MarketSession @relation(fields: [session_id], references: [id])
+  user    User?         @relation(fields: [user_id], references: [id])
+  bot     TradingBot?   @relation(fields: [bot_id], references: [id])
+  stock   Stock         @relation(fields: [stock_symbol], references: [symbol])
+
+  @@index([session_id, stock_symbol, status])
+  @@index([created_at])
+}
+
+model Trade {
+  id              Int      @id @default(autoincrement())
+  session_id      Int
+  stock_symbol    String   @db.VarChar(10)
+  buyer_order_id  Int
+  seller_order_id Int
+  quantity        Int
+  price           Decimal  @db.Decimal(10, 2)
+  trade_value     Decimal  @db.Decimal(15, 2)
+  executed_at     DateTime @default(now())
+
+  session MarketSession @relation(fields: [session_id], references: [id])
+  stock   Stock         @relation(fields: [stock_symbol], references: [symbol])
+
+  @@index([session_id, stock_symbol, executed_at])
+}
+
+// ============================
+// User Balance
+// ============================
+
+model UserBalance {
+  id                Int      @id @default(autoincrement())
+  user_id           Int      @unique
+  available_balance Decimal  @default(100000) @db.Decimal(15, 2) // Starting virtual money
+  frozen_balance    Decimal  @default(0) @db.Decimal(15, 2) // Money in pending orders
+  total_invested    Decimal  @default(0) @db.Decimal(15, 2)
+  total_pnl         Decimal  @default(0) @db.Decimal(15, 2)
+  updated_at        DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+// ============================
+// ML (Model, Training, Prediction)
+// ============================
+
+model MLModel {
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(100)
+  model_type      String   @db.VarChar(50) // "linear_regression", "random_forest"
+  version         String   @db.VarChar(20)
+  training_config Json // Hyperparameters, features used
+  metrics         Json // Accuracy, precision, recall, etc.
+  model_path      String?  @db.VarChar(255) // Path to saved model file
+  is_active       Boolean  @default(false)
+  trained_at      DateTime
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now())
+
+  predictions  MLPrediction[]
+  trainingSets MLTrainingSet[]
+}
+
+model MLTrainingSet {
+  id                 Int      @id @default(autoincrement())
+  model_id           Int
+  stock_symbols      String[] // Array of symbols used for training
+  start_date         DateTime
+  end_date           DateTime
+  features_used      Json // Technical indicators used as features
+  train_size         Decimal  @db.Decimal(5, 2) // % split
+  test_size          Decimal  @db.Decimal(5, 2)
+  train_score        Decimal? @db.Decimal(8, 4)
+  test_score         Decimal? @db.Decimal(8, 4)
+  cross_val_score    Decimal? @db.Decimal(8, 4)
+  confusion_matrix   Json?
+  feature_importance Json?
+  created_at         DateTime @default(now())
+
+  model MLModel @relation(fields: [model_id], references: [id], onDelete: Cascade)
+}
+
+model MLPrediction {
+  id               Int      @id @default(autoincrement())
+  model_id         Int
+  stock_symbol     String   @db.VarChar(10)
+  prediction_date  DateTime
+  predicted_trend  String   @db.VarChar(20) // "up", "down", "neutral"
+  confidence_score Decimal  @db.Decimal(5, 4)
+  predicted_price  Decimal? @db.Decimal(10, 2)
+  actual_price     Decimal? @db.Decimal(10, 2)
+  input_features   Json // Technical indicator values used
+  created_at       DateTime @default(now())
+
+  model MLModel @relation(fields: [model_id], references: [id], onDelete: Cascade)
+
+  @@index([stock_symbol, prediction_date])
+  @@index([model_id, created_at])
+}
+
+// ============================
+// Workflow / Data Sync Logs
+// ============================
+
+model WorkflowExecution {
+  id             Int       @id @default(autoincrement())
+  workflow_name  String    @db.VarChar(100)
+  workflow_type  String    @db.VarChar(50) // "data_sync", "indicator_calc"
+  status         String    @db.VarChar(20)
+  input_data     Json?
+  output_data    Json?
+  error_message  String?   @db.Text
+  execution_time Int? // milliseconds
+  started_at     DateTime
+  completed_at   DateTime?
+  created_at     DateTime  @default(now())
+
+  @@index([workflow_type, status])
+  @@index([started_at])
+}
+
+model DataSyncLog {
+  id            Int       @id @default(autoincrement())
+  provider      String    @db.VarChar(50) // "yahoo_finance"
+  symbol        String?   @db.VarChar(10)
+  sync_type     String    @db.VarChar(50) // "EOD_PRICE", "DIVIDEND", ...
+  status        String    @db.VarChar(20) // "SUCCESS" | "FAILED"
+  rows_affected Int?
+  message       String?   @db.Text
+  started_at    DateTime  @default(now())
+  completed_at  DateTime?
 }

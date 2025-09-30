@@ -13,6 +13,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
 import { RedisModule } from './redis/redis.module';
+import { YahoostockModule } from './yahoostock/yahoostock.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { RedisModule } from './redis/redis.module';
     AuthModule,
     PrismaModule,
     RedisModule,
+    YahoostockModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,23 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Role, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ErrorFactory } from '../common/errors';
 
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    return await this.prisma.user.create({
+      data: createUserDto,
+    });
   }
 
-  findAll() {
-    return `This action returns all user`;
+  async findAll() {
+    return await this.prisma.user.findMany();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: number) {
+    return await this.prisma.user.findFirst({
+      where: { id: id },
+    });
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -26,12 +31,37 @@ export class UserService {
     });
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: number, updateUserDto: UpdateUserDto) {
+    const existingUser = await this.findOne(id);
+    if (!existingUser) {
+      throw ErrorFactory.NotFoundError('User not found', existingUser);
+    }
+    try {
+      return this.prisma.$transaction(async (tx) => {
+        return await tx.user.update({
+          where: { id: id },
+          data: updateUserDto,
+        });
+      });
+    } catch (error) {
+      throw ErrorFactory.BusinessLogicError('Failed to update user', error);
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: number) {
+    const existingUser = await this.findOne(id);
+    if (!existingUser) {
+      throw ErrorFactory.NotFoundError('User not found', existingUser);
+    }
+    try {
+      return this.prisma.$transaction(async (tx) => {
+        return await tx.user.delete({
+          where: { id: id },
+        });
+      });
+    } catch (error) {
+      throw ErrorFactory.BusinessLogicError('Failed to remove user', error);
+    }
   }
 
   async getRolePermissionByUserId(userId: number) {

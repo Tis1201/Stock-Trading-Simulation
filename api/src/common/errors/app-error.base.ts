@@ -1,7 +1,7 @@
 export abstract class AppError extends Error {
   public readonly isOperational: boolean = true;
 
-  constructor(
+  protected constructor(
     public message: string,
     public statusCode: number,
     public errorCode?: string,
