@@ -321,6 +321,8 @@ model Stock {
   SimulatedPrice    SimulatedPrice[]
   MarketStats       MarketStats[]
   simConfigs        SimulationConfig[]
+
+  StockBarIntraday StockBarIntraday[]
 }
 
 model StockPrice {
@@ -645,4 +647,23 @@ model DataSyncLog {
   message       String?   @db.Text
   started_at    DateTime  @default(now())
   completed_at  DateTime?
+}
+
+model StockBarIntraday {
+  id           Int      @id @default(autoincrement())
+  stock_symbol String   @db.VarChar(10)   // "VNM"
+  ts           DateTime                  // timestamp chính xác phút/giờ (UTC)
+  interval     String   @db.VarChar(10)  // "1m","5m","15m","1h"
+  open         Decimal  @db.Decimal(10,2)
+  high         Decimal  @db.Decimal(10,2)
+  low          Decimal  @db.Decimal(10,2)
+  close        Decimal  @db.Decimal(10,2)
+  volume       BigInt
+  created_at   DateTime @default(now())
+
+  Stock Stock @relation(fields: [stock_symbol], references: [symbol], onDelete: Cascade)
+
+  @@unique([stock_symbol, ts, interval])
+  @@index([stock_symbol, ts])
+
 }

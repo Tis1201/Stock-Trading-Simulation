@@ -4,3 +4,9 @@ GET https://examples.http-client.intellij.net/get
 
 ### GET YAHOO FINANCE https://query1.finance.yahoo.com/v8/finance/chart/VIC.VN?interval=1d&range=6mo
 GET http://localhost:3000/api/yahoo/VIC.VN?interval=1d&range=6mo
+
+### GET YAHOO TO DB
+GET http://localhost:3000/api/yahoo/import-vn
+
+### GET A STOCK VN 
+GET http://localhost:3000/api/yahoo/ohlc?symbol=VNM.VN&years=1

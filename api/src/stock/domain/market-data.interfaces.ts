@@ -24,7 +24,28 @@ export interface OHLCPoint {
   adjClose?: number | null;
 }
 
+export type Interval =
+  | '1m'
+  | '2m'
+  | '5m'
+  | '15m'
+  | '30m'
+  | '60m'
+  | '90m'
+  | '1h'
+  | '1d'
+  | '5d'
+  | '1wk'
+  | '1mo'
+  | '3mo';
+
 export interface IMarketDataClient {
+  getDailyOHLC(
+    symbol: string,
+    from: Date,
+    to: Date,
+    interval?: Interval,   // 👈 optional, mặc định 1d
+  ): Promise<OHLCPoint[]>;
+
   getQuote(symbol: string): Promise<QuoteLite | null>;
-  getDailyOHLC(symbol: string, from: Date, to: Date): Promise<OHLCPoint[]>;
 }
