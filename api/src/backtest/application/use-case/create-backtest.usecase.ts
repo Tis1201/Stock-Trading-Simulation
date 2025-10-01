@@ -1,11 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
-import type { BacktestRepository } from '../ports/backtest.repository';
-import type { MessageBusPort } from '../ports/message-bus.port';
+import type { BacktestRepository } from '../../domain/ports/backtest.repository';
+import type { MessageBusPort } from '../../domain/ports/message-bus.port';
 import { CreateBacktestDto } from '../dto/create-backtest.dto';
 import { StrategyMapper } from '../mapper/strategy.mapper';
+import { BacktestService } from 'src/backtest/domain/services/backtest.service';
 
 @Injectable()
-export class CreateBacktestUseCase {
+export class CreateBacktestUseCase implements BacktestService{
   constructor(
     @Inject('BacktestRepository')
     private readonly repo: BacktestRepository,

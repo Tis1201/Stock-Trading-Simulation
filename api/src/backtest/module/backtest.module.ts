@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { PrismaClient } from '@prisma/client';
 import { BacktestController } from '../infrastructure/controllers/backtest.controller';
-import { CreateBacktestUseCase } from '../domain/use-case/create-backtest.usecase';
+import { CreateBacktestUseCase } from '../application/use-case/create-backtest.usecase';
 import { PrismaBacktestRepository } from '../infrastructure/persistence/prisma-backtest.repository';
 import { RabbitMqAdapter } from '../infrastructure/messaging/rabbitmq.adapter';
 
