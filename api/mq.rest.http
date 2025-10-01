@@ -1,0 +1,2 @@
+### TEST MQ
+GET http://localhost:3000/send?msg=Test123

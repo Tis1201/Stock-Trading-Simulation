@@ -14,6 +14,7 @@ import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
 import { RedisModule } from './redis/redis.module';
 import { YahoostockModule } from './yahoostock/yahoostock.module';
+import { RabbitMQService } from './rabbitmq/rabbitmq.service';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { YahoostockModule } from './yahoostock/yahoostock.module';
       provide: APP_INTERCEPTOR,
       useClass: ResponseInterceptor,
     },
+    RabbitMQService,
   ],
 })
 export class AppModule {}
