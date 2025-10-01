@@ -1,2 +1,52 @@
 ### TEST MQ
 GET http://localhost:3000/send?msg=Test123
+
+
+###POST BACKTEST
+POST http://localhost:3000/api/backtests
+Content-Type: application/json
+
+{
+  "strategy": {
+    "name": "SMA crossover strategy",
+    "description": "Buy when SMA(10) > SMA(50), sell otherwise",
+    "rules": [
+      {
+        "ruleOrder": 1,
+        "condition": {
+          "indicator": "SMA",
+          "params": { "period": 10 },
+          "operator": ">",
+          "compare_to": {
+            "indicator": "SMA",
+            "params": { "period": 50 }
+          }
+        },
+        "action": "BUY"
+      },
+      {
+        "ruleOrder": 2,
+        "condition": {
+          "indicator": "SMA",
+          "params": { "period": 10 },
+          "operator": "<",
+          "compare_to": {
+            "indicator": "SMA",
+            "params": { "period": 50 }
+          }
+        },
+        "action": "SELL"
+      }
+    ]
+  },
+  "dataFrom": "2022-01-01",
+  "dataTo": "2023-01-01",
+  "priceSource": "HISTORICAL",
+  "sessionId": null,
+  "initialCapital": 1000000,
+  "commissionRate": 0.001,
+  "jobConfig": {
+    "stop_loss": 0.05,
+    "take_profit": 0.1
+  }
+}

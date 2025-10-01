@@ -14,7 +14,8 @@ import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
 import { RedisModule } from './redis/redis.module';
 import { YahoostockModule } from './yahoostock/yahoostock.module';
-import { RabbitMQService } from './rabbitmq/rabbitmq.service';
+
+import { BacktestModule } from './backtest/module/backtest.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { RabbitMQService } from './rabbitmq/rabbitmq.service';
     PrismaModule,
     RedisModule,
     YahoostockModule,
+    BacktestModule,
   ],
   controllers: [AppController],
   providers: [
@@ -46,7 +48,6 @@ import { RabbitMQService } from './rabbitmq/rabbitmq.service';
       provide: APP_INTERCEPTOR,
       useClass: ResponseInterceptor,
     },
-    RabbitMQService,
   ],
 })
 export class AppModule {}

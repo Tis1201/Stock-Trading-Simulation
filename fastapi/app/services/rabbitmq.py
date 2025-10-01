@@ -2,8 +2,8 @@ import aio_pika
 import asyncio
 from aio_pika.abc import AbstractIncomingMessage
 from typing import Optional
+import json
 
-QUEUE_NAME = "test"
 RABBITMQ_URL = "amqp://guest:guest@localhost:5672/"
 
 _connection: Optional[aio_pika.RobustConnection] = None
@@ -14,12 +14,27 @@ async def consume():
     global _connection, _channel
     _connection = await aio_pika.connect_robust(RABBITMQ_URL)
     _channel = await _connection.channel()
-    queue = await _channel.declare_queue(QUEUE_NAME, durable=True)
+
+    # Declare exchange & queue
+    exchange = await _channel.declare_exchange("backtest.exchange", aio_pika.ExchangeType.TOPIC, durable=True)
+    queue = await _channel.declare_queue("backtest.jobs", durable=True)
+    await queue.bind(exchange, routing_key="backtest.requested")
 
     async with queue.iterator() as qiterator:
         async for message in qiterator:  # type: AbstractIncomingMessage
             async with message.process():
-                print(f"[FastAPI] Received: {message.body.decode()}")
+                data = message.body.decode()
+                print(f"[FastAPI] Received backtest job: {data}")
+
+                # TODO: chạy backtest tại đây...
+                result = {"job_id": 1, "status": "COMPLETED"}
+
+                # publish kết quả với JSON hợp lệ
+                await exchange.publish(
+                    aio_pika.Message(body=json.dumps(result).encode()),
+                    routing_key="backtest.completed"
+                )
+                print("[FastAPI] Sent backtest result:", result)
 
 async def start_consumer():
     global _task
