@@ -44,7 +44,7 @@ export class UserService {
         });
       });
     } catch (error) {
-      throw ErrorFactory.BusinessLogicError('Failed to update user', error);
+      throw ErrorFactory.BusinessLogicError('Failed to update user', updateUserDto);
     }
   }
 

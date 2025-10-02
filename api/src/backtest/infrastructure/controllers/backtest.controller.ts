@@ -11,10 +11,11 @@ export class BacktestController {
   @Public()
   @Post()
   async create(@Req() req: Request, @Body() dto: CreateBacktestDto) {
-    const userId = (req as any).user?.id ?? 1; // TODO: lấy từ JWT
+    const userId = (req as any).user?.id ?? 1; 
     return this.service.createBacktestJob(userId, dto);
   }
 
+  @Public()
   @Get(':jobId')
   async get(@Param('jobId') jobId: string) {
     return this.service.getBacktestResult(Number(jobId));

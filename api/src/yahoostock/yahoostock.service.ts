@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { runWithConcurrency } from 'src/utils/concurrancy';
-import { sleep, retry } from 'src/utils/async';
+
 
 import type { ISymbolProvider } from 'src/stock/domain/symbol-provider.interface';
 import type {
@@ -11,6 +11,9 @@ import type {
   IStockRepository,
   IStockPriceRepository,
 } from 'src/stock/domain/repositories.interfaces';
+
+import { YahooFinanceError } from 'src/common/errors/types/yahoo-finance2.error';
+import { retry, sleep } from 'src/utils/async';
 
 export interface ImportOptions {
   limitSymbols?: number;
@@ -59,9 +62,13 @@ export class YahoostockService {
       }
 
       try {
+        // lấy quote
         const quote = await retry(() => this.market.getQuote(symbol), 3, 600);
-        if (!quote) throw new Error('No quote');
+        if (!quote) {
+          throw YahooFinanceError.notFound(symbol);
+        }
 
+        // upsert stock vào DB
         await this.stocks.upsertStock({
           symbol: quote.symbol,
           company_name: quote.longName ?? quote.shortName ?? quote.symbol,
@@ -75,6 +82,7 @@ export class YahoostockService {
           is_active: true,
         });
 
+        // lấy OHLC
         const bars = await retry(
           () => this.market.getDailyOHLC(symbol, from, to, interval),
           3,
@@ -92,13 +100,20 @@ export class YahoostockService {
             volume: BigInt(Math.max(0, b.volume)),
             adjusted_close_price: b.adjClose ?? null,
           }));
-          const res = await this.prices.bulkInsertDailyPrices(rows); // createMany({ skipDuplicates: true })
+          const res = await this.prices.bulkInsertDailyPrices(rows); 
           inserted += res.inserted;
           skipped += res.skipped;
         }
       } catch (e) {
-        errors.push({ symbol, error: (e as Error).message });
-        this.logger.warn(`Symbol ${symbol} failed: ${(e as Error).message}`);
+        // phân biệt error domain vs unexpected
+        if (e instanceof YahooFinanceError) {
+          this.logger.warn(`[YahooFinance] Symbol ${symbol} failed: ${e.message}`);
+          errors.push({ symbol, error: e.message });
+        } else {
+          const err = e as Error;
+          this.logger.error(`[System] Symbol ${symbol} failed`, err.stack);
+          errors.push({ symbol, error: err.message });
+        }
       } finally {
         done++;
         if (done % 20 === 0) {
