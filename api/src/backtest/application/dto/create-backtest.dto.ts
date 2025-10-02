@@ -50,6 +50,12 @@ export class StrategyDTO {
 
 @Exclude()
 export class CreateBacktestDto {
+ 
+  @Expose()
+  @IsString()
+  symbol: string;
+
+
   @Expose()
   @ValidateNested()
   @Type(() => StrategyDTO)
@@ -86,3 +92,4 @@ export class CreateBacktestDto {
   @IsObject()
   jobConfig?: Record<string, any>;
 }
+

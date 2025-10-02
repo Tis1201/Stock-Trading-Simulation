@@ -3,7 +3,7 @@ GET http://localhost:3000/send?msg=Test123
 
 
 ###GET JOBID
-GET http://localhost:3000/api/backtests/3
+GET http://localhost:3000/api/backtests/4
 
 
 ###POST BACKTEST
@@ -43,6 +43,7 @@ Content-Type: application/json
       }
     ]
   },
+  "symbol": "FPT.VN",
   "dataFrom": "2022-01-01",
   "dataTo": "2023-01-01",
   "priceSource": "HISTORICAL",

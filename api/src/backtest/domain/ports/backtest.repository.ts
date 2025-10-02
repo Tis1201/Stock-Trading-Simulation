@@ -4,6 +4,7 @@ import { StrategyEntity } from '../entities/strategy.entity';
 export interface BacktestRepository {
   createStrategyWithRules(userId: number, strategy: StrategyEntity): Promise<{ strategyId: number }>;
   createJob(userId: number, dto: {
+    symbol: string;
     strategy_id: number;
     data_from: Date; data_to: Date;
     price_source: 'HISTORICAL'|'SIM_PRIVATE'|'SIM_PUBLIC';
@@ -15,4 +16,8 @@ export interface BacktestRepository {
 
   updateJobStatus(jobId: number, patch: Partial<BacktestJobEntity>): Promise<void>;
   getJobWithTrades(jobId: number): Promise<BacktestJobEntity | null>;
+
+  createSession(userId: number): Promise<any>;
+
 }
+

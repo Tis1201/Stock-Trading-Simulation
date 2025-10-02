@@ -4,6 +4,7 @@ export class BacktestJobEntity {
   id!: number;
   user_id!: number;
   strategy_id!: number;
+  symbol!: string;
   status!: BacktestStatus;
   data_from?: Date;
   data_to?: Date;

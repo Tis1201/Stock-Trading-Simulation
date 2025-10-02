@@ -82,6 +82,8 @@ model User {
   simConfigsOwned SimulationConfig[]
 
   BacktestJob BacktestJob[] @relation("BacktestOwner")
+
+  BacktestSession BacktestSession[]
 }
 
 model Role {
@@ -236,6 +238,7 @@ model BacktestJob {
   id                Int         @id @default(autoincrement())
   user_id           Int
   strategy_id       Int
+  symbol           String
   status            String      @db.VarChar(50)
   // Khoảng dữ liệu dùng để backtest:
   data_from         DateTime?
@@ -243,7 +246,8 @@ model BacktestJob {
   // Nguồn dữ liệu backtest:
   price_source      PriceSource @default(HISTORICAL)
   // Gắn với session mô phỏng nào (khi price_source = SIM_PRIVATE / SIM_PUBLIC):
-  session_id        Int?
+  market_session_id   Int?
+  backtest_session_id Int?
   owner_user_id     Int?
   // Cấu hình & tham số khởi tạo:
   initial_capital   Decimal     @db.Decimal(15, 2)
@@ -265,12 +269,15 @@ model BacktestJob {
 
   user     User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
   strategy Strategy       @relation(fields: [strategy_id], references: [id], onDelete: Cascade)
-  session  MarketSession? @relation(fields: [session_id], references: [id])
+  session  MarketSession? @relation(fields: [market_session_id], references: [id])
   owner    User?          @relation("BacktestOwner", fields: [owner_user_id], references: [id])
+  backtestSession BacktestSession? @relation(fields: [backtest_session_id], references: [id], map: "BacktestSessionJobs")
+  stock     Stock? @relation(fields: [symbol], references: [symbol], onDelete: Cascade)
 
   trades BacktestTrade[]
 
-  @@index([price_source, session_id, user_id, created_at])
+  @@index([price_source, market_session_id, user_id, created_at])
+
 }
 
 model BacktestTrade {
@@ -323,6 +330,8 @@ model Stock {
   simConfigs        SimulationConfig[]
 
   StockBarIntraday StockBarIntraday[]
+
+  BacktestJob BacktestJob[]
 }
 
 model StockPrice {
@@ -666,4 +675,13 @@ model StockBarIntraday {
   @@unique([stock_symbol, ts, interval])
   @@index([stock_symbol, ts])
 
+}
+
+model BacktestSession {
+  id        Int            @id @default(autoincrement())
+  userId    Int
+  createdAt DateTime       @default(now())
+
+  jobs      BacktestJob[]
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

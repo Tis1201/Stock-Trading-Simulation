@@ -1,5 +1,6 @@
 export interface MessageBusPort {
   publishBacktestRequested(payload: {
+    symbol: string;
     job_id: number;
     strategy_id: number;
     data_from: string;
