@@ -1,8 +1,12 @@
-import { HttpStatus } from "@nestjs/common";
-import { AppError } from "../app-error.base";
+import { HttpStatus } from '@nestjs/common';
+import { AppError } from '../app-error.base';
 
 export class YahooFinanceError extends AppError {
-  constructor(message: string, detail?: any, status: number = HttpStatus.BAD_GATEWAY) {
+  constructor(
+    message: string,
+    detail?: any,
+    status: number = HttpStatus.BAD_GATEWAY,
+  ) {
     super(message, status, 'YAHOO_FINANCE_ERROR', detail);
   }
 

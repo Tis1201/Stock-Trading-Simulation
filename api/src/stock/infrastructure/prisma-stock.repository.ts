@@ -1,15 +1,29 @@
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, Stock } from '@prisma/client';
 import type {
   IStockRepository,
   StockUpsertInput,
 } from 'src/stock/domain/repositories.interfaces';
 import { Injectable } from '@nestjs/common';
 import { ErrorFactory } from 'src/common/errors';
+import { PaginatedResult, Paginator } from 'src/utils/paginator';
 
 @Injectable()
 export class PrismaStockRepository implements IStockRepository {
   constructor(private readonly prisma: PrismaService) {}
+  async getStock(
+    page: number,
+    limit: number,
+  ): Promise<PaginatedResult<Stock> | null> {
+    const paginator = new Paginator(page, limit);
+    return paginator.paginatePrisma(
+      this.prisma.stock.findMany({
+        skip: paginator.offset,
+        take: paginator.limit,
+      }),
+      this.prisma.stock.count(),
+    );
+  }
 
   private toDecimalOrNull(v?: number | bigint | string | null) {
     if (v === undefined || v === null) return null;

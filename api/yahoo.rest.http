@@ -1,6 +1,3 @@
-### GET request to example server
-GET https://examples.http-client.intellij.net/get
-    ?generated-in=WebStorm
 
 ### GET YAHOO FINANCE https://query1.finance.yahoo.com/v8/finance/chart/VIC.VN?interval=1d&range=6mo
 GET http://localhost:3000/api/yahoo/VIC.VN?interval=1d&range=6mo
@@ -9,4 +6,7 @@ GET http://localhost:3000/api/yahoo/VIC.VN?interval=1d&range=6mo
 GET http://localhost:3000/api/yahoo/import-vn
 
 ### GET A STOCK VN 
-GET http://localhost:3000/api/yahoo/ohlc?symbol=VNM.VN&years=1
+GET http://localhost:3000/api/yahoo/ohlc?symbol=VNM.VN&months=6
+
+### GET STOCK VN fromn db
+GET http://localhost:3000/api/yahoo/stock?page=1&limit=10

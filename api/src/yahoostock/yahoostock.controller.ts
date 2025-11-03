@@ -85,4 +85,10 @@ export class YahoostockController {
     const rows = await this.market.getDailyOHLC(symbol.toUpperCase(), from, to);
     return { symbol: symbol.toUpperCase(), count: rows.length, data: rows };
   }
+
+  @Public()
+  @Get('stock')
+  async getStock(@Query('page') page: number, @Query('limit') limit: number) {
+    return this.yahoostockService.getStock(page, limit);
+  }
 }

@@ -56,7 +56,7 @@ export class YahooFinanceClient implements IMarketDataClient {
             q.close != null,
         )
         .map((q: any, i: number) => ({
-          date: new Date(q.date!),
+          date: new Date(q.date),
           open: Number(q.open),
           high: Number(q.high),
           low: Number(q.low),

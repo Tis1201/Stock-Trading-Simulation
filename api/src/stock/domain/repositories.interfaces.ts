@@ -1,3 +1,6 @@
+import { Stock } from '@prisma/client';
+import { PaginatedResult } from 'src/utils/paginator';
+
 export interface StockUpsertInput {
   symbol: string;
   company_name: string;
@@ -10,6 +13,7 @@ export interface StockUpsertInput {
 
 export interface IStockRepository {
   upsertStock(data: StockUpsertInput): Promise<void>;
+  getStock(page: number, limit: number): Promise<PaginatedResult<Stock> | null>;
 }
 
 export interface StockPriceCreateManyInput {

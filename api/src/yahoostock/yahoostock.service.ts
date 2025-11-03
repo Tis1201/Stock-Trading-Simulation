@@ -36,6 +36,10 @@ export class YahoostockService {
     private readonly prices: IStockPriceRepository,
   ) {}
 
+  async getStock(page: number, limit: number) {
+    return this.stocks.getStock(page, limit);
+  }
+
   async getAllStockVN(opts: ImportOptions = {}) {
     const {
       limitSymbols = Number.POSITIVE_INFINITY,

@@ -36,14 +36,16 @@ export class Paginator {
     };
   }
 
-  async paginatePrisma<T>(
+  async paginatePrisma<T, R>(
     prismaQuery: Promise<T[]>,
     countQuery: Promise<number>,
-  ): Promise<PaginatedResult<T>> {
+    mapper?: (data: T) => R,
+  ): Promise<PaginatedResult<R>> {
     const [data, total] = await Promise.all([prismaQuery, countQuery]);
     return {
-      data,
+      data: mapper ? data.map(mapper) : (data as unknown as R[]),
       metadata: this.getMetadata(total),
     };
   }
+
 }
