@@ -21,9 +21,10 @@ app = FastAPI(title="FastAPI MQ test", lifespan=lifespan)
 
 # ✅ THÊM: CORS middleware
 origins = [
-    "http://localhost:5173",  # FE Vite của bạn
+    "http://localhost:5173",    # Vite mặc định
     "http://127.0.0.1:5173",
-    # thêm domain khác nếu cần
+    "http://localhost:3000",    # <--- THÊM DÒNG NÀY (Đây là nơi FE của bạn đang chạy)
+    "http://127.0.0.1:3000",    # Thêm cả IP này cho chắc chắn
 ]
 
 app.add_middleware(
