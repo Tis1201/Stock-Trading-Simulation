@@ -16,9 +16,6 @@ import { RedisModule } from './redis/redis.module';
 import { YahoostockModule } from './yahoostock/yahoostock.module';
 
 import { BacktestModule } from './backtest/module/backtest.module';
-import { WatchlistController } from './watchlist/presentation/controllers/watchlist/watchlist.controller';
-import { WatchlistModule } from './watchlist/watchlist/watchlist.module';
-import { WatchlistController } from './watchlist/presentation/controllers/watchlist/watchlist.controller';
 
 @Module({
   imports: [
@@ -30,9 +27,8 @@ import { WatchlistController } from './watchlist/presentation/controllers/watchl
     RedisModule,
     YahoostockModule,
     BacktestModule,
-    WatchlistModule,
   ],
-  controllers: [AppController, WatchlistController],
+  controllers: [AppController,],
   providers: [
     AppService,
     AuthService,

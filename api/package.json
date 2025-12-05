@@ -54,6 +54,7 @@
     "@nestjs/testing": "^11.0.1",
     "@types/connect-redis": "^0.0.23",
     "@types/cookie-parser": "^1.4.9",
+    "@types/dotenv": "^8.2.3",
     "@types/express": "^5.0.0",
     "@types/express-session": "^1.18.2",
     "@types/jest": "^30.0.0",
