@@ -7,7 +7,7 @@ GET http://localhost:3000/api/backtests/4
 
 
 ###POST BACKTEST
-POST http://localhost:3000/api/backtests
+POST http://localhost:3001/api/backtests
 Content-Type: application/json
 
 {
@@ -55,3 +55,7 @@ Content-Type: application/json
     "take_profit": 0.1
   }
 }
+
+
+### get backtest id
+    GET http://localhost:3001/api/backtests/25

@@ -13,6 +13,19 @@ Content-Type: application/json
     "password_hash": "$2b$10$hashedpassword3"
 }
 
+### REGISTER
+POST http://localhost:3001/api/user
+Content-Type: application/json
+
+{
+  "email": "newuser@email.com",
+  "password_hash": "$2b$10$hashedpassword_example",
+  "first_name": "New",
+  "last_name": "User",
+  "phone": "0987654321"
+}
+
+
 ### get user
 GET http://localhost:3000/api/user
 Content-Type: application/json

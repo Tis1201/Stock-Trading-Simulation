@@ -10,3 +10,5 @@ pandas-ta
 scikit-learn
 xgboost
 matplotlib
+psycopg2-binary
+sqlalchemy

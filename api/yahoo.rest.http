@@ -3,7 +3,7 @@
 GET http://localhost:3000/api/yahoo/VIC.VN?interval=1d&range=6mo
 
 ### GET YAHOO TO DB
-GET http://localhost:3000/api/yahoo/import-vn
+GET http://localhost:3001/api/yahoo/import-vn
 
 ### GET A STOCK VN 
 GET http://localhost:3000/api/yahoo/ohlc?symbol=VNM.VN&months=6

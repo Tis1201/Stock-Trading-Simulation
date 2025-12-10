@@ -235,49 +235,56 @@ model StrategyRule {
 }
 
 model BacktestJob {
-  id                Int         @id @default(autoincrement())
-  user_id           Int
-  strategy_id       Int
-  symbol           String
-  status            String      @db.VarChar(50)
+  id                  Int         @id @default(autoincrement())
+  user_id             Int
+  strategy_id         Int
+  symbol              String
+  status              String      @db.VarChar(50)
   // Khoảng dữ liệu dùng để backtest:
-  data_from         DateTime?
-  data_to           DateTime?
+  data_from           DateTime?
+  data_to             DateTime?
   // Nguồn dữ liệu backtest:
-  price_source      PriceSource @default(HISTORICAL)
+  price_source        PriceSource @default(HISTORICAL)
   // Gắn với session mô phỏng nào (khi price_source = SIM_PRIVATE / SIM_PUBLIC):
   market_session_id   Int?
   backtest_session_id Int?
-  owner_user_id     Int?
+  owner_user_id       Int?
   // Cấu hình & tham số khởi tạo:
-  initial_capital   Decimal     @db.Decimal(15, 2)
-  commission_rate   Decimal     @db.Decimal(5, 4)
-  job_config        Json
+  initial_capital     Decimal     @db.Decimal(15, 2)
+  commission_rate     Decimal     @db.Decimal(5, 4)
+  job_config          Json
   // Metrics kết quả:
-  total_return      Decimal?    @db.Decimal(10, 4)
-  annual_return     Decimal?    @db.Decimal(10, 4)
-  max_drawdown      Decimal?    @db.Decimal(10, 4)
-  sharpe_ratio      Decimal?    @db.Decimal(8, 4)
-  win_rate          Decimal?    @db.Decimal(5, 4)
+  total_return        Decimal?    @db.Decimal(15, 2)
+
+  // annual_return tương tự
+  annual_return Decimal? @db.Decimal(15, 2)
+
+  // max_drawdown: Python trả về thang 100 (ví dụ 25.5 cho 25.5%), cần (10, 2)
+  max_drawdown Decimal? @db.Decimal(10, 2)
+
+  // sharpe_ratio: Thường nhỏ (< 10), nhưng để (10, 4) cho thoải mái
+  sharpe_ratio Decimal? @db.Decimal(10, 4)
+
+  // win_rate: Python trả về 0 -> 100. Cần ít nhất 3 số nguyên. Để (10, 2) là đẹp nhất (99999999.99)
+  win_rate          Decimal?  @db.Decimal(10, 2)
   total_trades      Int?
   profitable_trades Int?
   error_message     String?
-  started_at        DateTime    @default(now())
+  started_at        DateTime  @default(now())
   completed_at      DateTime?
-  created_at        DateTime    @default(now())
-  updated_at        DateTime    @default(now())
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @default(now())
 
-  user     User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  strategy Strategy       @relation(fields: [strategy_id], references: [id], onDelete: Cascade)
-  session  MarketSession? @relation(fields: [market_session_id], references: [id])
-  owner    User?          @relation("BacktestOwner", fields: [owner_user_id], references: [id])
+  user            User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  strategy        Strategy         @relation(fields: [strategy_id], references: [id], onDelete: Cascade)
+  session         MarketSession?   @relation(fields: [market_session_id], references: [id])
+  owner           User?            @relation("BacktestOwner", fields: [owner_user_id], references: [id])
   backtestSession BacktestSession? @relation(fields: [backtest_session_id], references: [id], map: "BacktestSessionJobs")
-  stock     Stock? @relation(fields: [symbol], references: [symbol], onDelete: Cascade)
+  stock           Stock?           @relation(fields: [symbol], references: [symbol], onDelete: Cascade)
 
   trades BacktestTrade[]
 
   @@index([price_source, market_session_id, user_id, created_at])
-
 }
 
 model BacktestTrade {
@@ -660,13 +667,13 @@ model DataSyncLog {
 
 model StockBarIntraday {
   id           Int      @id @default(autoincrement())
-  stock_symbol String   @db.VarChar(10)   // "VNM"
-  ts           DateTime                  // timestamp chính xác phút/giờ (UTC)
-  interval     String   @db.VarChar(10)  // "1m","5m","15m","1h"
-  open         Decimal  @db.Decimal(10,2)
-  high         Decimal  @db.Decimal(10,2)
-  low          Decimal  @db.Decimal(10,2)
-  close        Decimal  @db.Decimal(10,2)
+  stock_symbol String   @db.VarChar(10) // "VNM"
+  ts           DateTime // timestamp chính xác phút/giờ (UTC)
+  interval     String   @db.VarChar(10) // "1m","5m","15m","1h"
+  open         Decimal  @db.Decimal(10, 2)
+  high         Decimal  @db.Decimal(10, 2)
+  low          Decimal  @db.Decimal(10, 2)
+  close        Decimal  @db.Decimal(10, 2)
   volume       BigInt
   created_at   DateTime @default(now())
 
@@ -674,14 +681,13 @@ model StockBarIntraday {
 
   @@unique([stock_symbol, ts, interval])
   @@index([stock_symbol, ts])
-
 }
 
 model BacktestSession {
-  id        Int            @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   userId    Int
-  createdAt DateTime       @default(now())
+  createdAt DateTime @default(now())
 
-  jobs      BacktestJob[]
-  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs BacktestJob[]
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
