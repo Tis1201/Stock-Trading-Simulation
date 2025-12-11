@@ -9,6 +9,13 @@ export class BacktestController {
   constructor(private readonly service: CreateBacktestUseCase) {}
 
   @Public()
+  @Get()
+  async list(@Req() req: Request) {
+    const userId = (req as any).user?.id ?? 1;
+    return this.service.getBacktestList(userId);
+  }
+
+  @Public()
   @Post()
   async create(@Req() req: Request, @Body() dto: CreateBacktestDto) {
     const userId = (req as any).user?.id ?? 1; 

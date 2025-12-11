@@ -1,3 +1,4 @@
+// src/user/user.controller.ts
 import {
   Controller,
   Get,
@@ -6,6 +7,8 @@ import {
   Patch,
   Param,
   Delete,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -44,5 +47,15 @@ export class UserController {
   @RequiredPermission('user.delete')
   remove(@Param('id') id: string) {
     return this.userService.remove(Number(id));
+  }
+
+  // ✅ NEW: GET /api/user/me/balance (auth required)
+  @Get('me/balance')
+  async getMyBalance(@Req() req: any) {
+    const userId = req.user?.id ?? req.user?.sub; // tuỳ payload JWT, chỉnh lại nếu bạn dùng field khác
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.userService.getMyBalance(Number(userId));
   }
 }

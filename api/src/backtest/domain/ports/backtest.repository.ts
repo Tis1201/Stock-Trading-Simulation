@@ -19,5 +19,6 @@ export interface BacktestRepository {
 
   createSession(userId: number): Promise<any>;
 
+  getBacktestList(userId: number): Promise<any>;
 }
 

@@ -260,4 +260,20 @@ export class PrismaBacktestRepository implements BacktestRepository {
       },
     });
   }
+  async getBacktestList(userId: number) {
+    return this.prisma.backtestJob.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+      select: {
+        id: true,
+        symbol: true,
+        status: true,
+        data_from: true,
+        data_to: true,
+        initial_capital: true,
+        created_at: true,
+      },
+    });
+  }
+
 }

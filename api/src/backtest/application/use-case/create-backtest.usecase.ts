@@ -65,28 +65,28 @@ export class CreateBacktestUseCase implements BacktestService {
     const job: any = await this.repo.getJobWithTrades(jobId);
 
     // Đọc result đã lưu từ FastAPI trong job_config.result
-    const jobConfig = (job.job_config) || {};
+    const jobConfig = job.job_config || {};
     const result = jobConfig.result || {};
 
     const netProfit = toNumber(result.netProfit);
     const winRate =
       result.winRate !== undefined
         ? result.winRate
-        : toNumber(job.win_rate) ?? 0;
+        : (toNumber(job.win_rate) ?? 0);
     const maxDrawdown =
       result.maxDrawdown !== undefined
         ? result.maxDrawdown
-        : toNumber(job.max_drawdown) ?? 0;
+        : (toNumber(job.max_drawdown) ?? 0);
     const profitFactor = toNumber(result.profitFactor);
 
     const totalTrades =
       result.totalTrades !== undefined
         ? result.totalTrades
-        : job.total_trades ?? 0;
+        : (job.total_trades ?? 0);
     const profitableTrades =
       result.profitableTrades !== undefined
         ? result.profitableTrades
-        : job.profitable_trades ?? 0;
+        : (job.profitable_trades ?? 0);
 
     const equityCurve = Array.isArray(result.equityCurve)
       ? result.equityCurve
@@ -129,5 +129,8 @@ export class CreateBacktestUseCase implements BacktestService {
       underwater,
       trades,
     };
+  }
+  async getBacktestList(userId: number) {
+    return this.repo.getBacktestList(userId);
   }
 }

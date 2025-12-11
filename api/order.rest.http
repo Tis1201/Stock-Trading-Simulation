@@ -1,0 +1,15 @@
+### Create new order
+### 1) Tạo lệnh đặt mua cổ phiếu (MARKET ORDER)
+POST http://localhost:3001/api/orders
+Content-Type: application/json
+
+{
+  "stockSymbol": "FPT.VN",
+  "quantity": 100,
+  "orderType": "market",
+  "side": "buy"
+}
+
+### 2) Lấy danh sách lệnh của user (mặc định userId = 1)
+GET http://localhost:3001/api/orders?limit=20&offset=0
+Accept: application/json

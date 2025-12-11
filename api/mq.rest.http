@@ -2,8 +2,8 @@
 GET http://localhost:3000/send?msg=Test123
 
 
-###GET JOBID
-GET http://localhost:3000/api/backtests/4
+###GET List
+GET http://localhost:3001/api/backtests
 
 
 ###POST BACKTEST
@@ -58,4 +58,4 @@ Content-Type: application/json
 
 
 ### get backtest id
-    GET http://localhost:3001/api/backtests/25
+    GET http://localhost:3001/api/backtests/36

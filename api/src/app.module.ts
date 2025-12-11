@@ -16,6 +16,7 @@ import { RedisModule } from './redis/redis.module';
 import { YahoostockModule } from './yahoostock/yahoostock.module';
 
 import { BacktestModule } from './backtest/module/backtest.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { BacktestModule } from './backtest/module/backtest.module';
     RedisModule,
     YahoostockModule,
     BacktestModule,
+    OrderModule,
   ],
   controllers: [AppController,],
   providers: [

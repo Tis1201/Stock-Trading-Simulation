@@ -2,15 +2,16 @@
 GET http://localhost:3000
 
 ###GET METRIC
-GET http://localhost:3000/metrics
+GET http://localhost:3001/api/user/me/balance
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsInJvbGUiOltdLCJwZXJtaXNzaW9uIjpbXSwiaWF0IjoxNzY1NDYzNjg0LCJleHAiOjE3NjU0NjQ1ODR9.GmbQR-vb-DlAaaxV1BDLWJClHxw7XS62FgWsA3azj4o
 
 ###LOGIN
-POST http://localhost:3000/auth/login
+POST http://localhost:3001/auth/login
 Content-Type: application/json
 
 { 
-    "email": "user1@email.com",
-    "password_hash": "$2b$10$hashedpassword3"
+    "email": "newuser1@email.com",
+    "password_hash": "$2b$10$hashedpassword_example"
 }
 
 ### REGISTER
@@ -18,11 +19,11 @@ POST http://localhost:3001/api/user
 Content-Type: application/json
 
 {
-  "email": "newuser@email.com",
+  "email": "newuser1@email.com",
   "password_hash": "$2b$10$hashedpassword_example",
   "first_name": "New",
   "last_name": "User",
-  "phone": "0987654321"
+  "phone": "09876543212"
 }
 
 
