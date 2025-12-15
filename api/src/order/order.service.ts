@@ -13,10 +13,10 @@ export class OrderService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Tạo 1 order cho user (đặt lệnh BUY/SELL hoặc sync kết quả từ simulator)
-   * Nếu status === 'filled' thì sẽ:
-   *  - BUY: trừ tiền, tăng số cổ phiếu trong UserPortfolio
-   *  - SELL: cộng tiền, giảm số cổ phiếu, cập nhật PnL
+   * Tạo 1 order cho user
+   * Nếu status === 'filled' thì:
+   *  - BUY: trừ tiền, upsert UserPortfolio (insert/update)
+   *  - SELL: cộng tiền, giảm shares (atomic), update PnL, bán hết thì delete portfolio row
    */
   async createOrderForUser(userId: number, dto: CreateOrderDto) {
     return this.prisma.$transaction(async (tx) => {
@@ -35,7 +35,10 @@ export class OrderService {
         botId,
       } = dto;
 
-      // 0. Validate input cơ bản
+      // 0) Validate input
+      if (!userId || userId <= 0) {
+        throw new BadRequestException('userId không hợp lệ');
+      }
       if (!stockSymbol) {
         throw new BadRequestException('stockSymbol là bắt buộc');
       }
@@ -49,33 +52,29 @@ export class OrderService {
         throw new BadRequestException('side phải là "buy" hoặc "sell"');
       }
 
-      // 1. Kiểm tra mã cổ phiếu có tồn tại
+      // 1) Kiểm tra mã cổ phiếu tồn tại
       const stock = await tx.stock.findUnique({
         where: { symbol: stockSymbol },
       });
-
       if (!stock) {
         throw new NotFoundException('Mã cổ phiếu không tồn tại');
       }
 
-      // 2. Lấy (hoặc tạo) MarketSession phù hợp
+      // 2) Lấy (hoặc tạo) MarketSession
       let sessionId: number;
 
       if (dtoSessionId) {
-        // Client truyền sessionId cụ thể
         const session = await tx.marketSession.findUnique({
           where: { id: dtoSessionId },
         });
-
         if (!session) {
           throw new NotFoundException(
             `Market session id=${dtoSessionId} không tồn tại`,
           );
         }
-
         sessionId = session.id;
       } else {
-        // Không truyền sessionId: tự tìm hoặc tạo session PUBLIC active hôm nay
+        // Auto find/create PUBLIC active session for today
         const now = new Date();
         const startOfDay = new Date(
           now.getFullYear(),
@@ -94,7 +93,6 @@ export class OrderService {
           0,
         );
 
-        // Tìm session PUBLIC active trong hôm nay
         let session = await tx.marketSession.findFirst({
           where: {
             mode: MarketMode.PUBLIC,
@@ -108,7 +106,6 @@ export class OrderService {
         });
 
         if (!session) {
-          // Nếu chưa có, tự tạo session PUBLIC mới
           const now2 = new Date();
           session = await tx.marketSession.create({
             data: {
@@ -119,7 +116,6 @@ export class OrderService {
               current_time: now2,
               is_active: true,
               simulation_speed: 1,
-              // end_time để null, sẽ cập nhật sau khi kết thúc
             },
           });
         }
@@ -127,7 +123,7 @@ export class OrderService {
         sessionId = session.id;
       }
 
-      // 3. Tạo order (mở rộng data)
+      // 3) Create order
       const order = await tx.order.create({
         data: {
           session_id: sessionId,
@@ -137,25 +133,23 @@ export class OrderService {
           order_type: orderType,
           side,
           quantity,
-          price: price != null ? new Prisma.Decimal(price) : null,
 
-          // nếu dto không gửi status thì mặc định pending
+          price: price != null ? new Prisma.Decimal(price) : null,
           status: status ?? 'pending',
 
-          filled_quantity:
-            filledQuantity != null ? filledQuantity : 0,
+          filled_quantity: filledQuantity != null ? filledQuantity : 0,
           filled_price:
             filledPrice != null
               ? new Prisma.Decimal(filledPrice)
               : price != null
                 ? new Prisma.Decimal(price)
                 : null,
+
           commission:
             commission != null
               ? new Prisma.Decimal(commission)
               : new Prisma.Decimal(0),
 
-          // created_at DB đã có default
           filled_at: filledAt ? new Date(filledAt) : null,
         },
         include: {
@@ -164,42 +158,38 @@ export class OrderService {
         },
       });
 
-      // 4. Nếu order chưa "filled" thì chỉ trả order, không đụng tới balance/portfolio
+      // 4) Nếu chưa filled -> return
       if (order.status !== 'filled') {
         return order;
       }
 
-      // =====================================
-      // 5. Áp dụng hiệu ứng tài chính khi lệnh đã FILLED
-      // =====================================
+      // 5) Chuẩn hoá filledQty + filledPrice
+      const filledQty =
+        order.filled_quantity != null && order.filled_quantity > 0
+          ? order.filled_quantity
+          : order.quantity;
 
-      // Số lượng & giá khớp thực tế
-      const filledQty = order.filled_quantity || order.quantity;
-      const filledPriceNumber = order.filled_price
-        ? Number(order.filled_price)
-        : order.price
-          ? Number(order.price)
-          : 0;
-      const commissionNumber = order.commission
-        ? Number(order.commission)
-        : 0;
+      const filledPriceNumber =
+        order.filled_price != null
+          ? Number(order.filled_price)
+          : order.price != null
+            ? Number(order.price)
+            : 0;
+
+      const commissionNumber = order.commission ? Number(order.commission) : 0;
 
       if (filledQty <= 0 || filledPriceNumber <= 0) {
-        // Không có gì để cập nhật portfolio
-        return order;
+        return order; // không đủ dữ liệu để update portfolio/balance
       }
 
-      // 5.1. Đảm bảo userBalance tồn tại
+      // 6) Ensure userBalance exists
       let userBalance = await tx.userBalance.findUnique({
         where: { user_id: userId },
       });
 
       if (!userBalance) {
         userBalance = await tx.userBalance.create({
-          data: {
-            user_id: userId,
-            // dùng default trong schema: 100000, 0, 0, 0
-          },
+          data: { user_id: userId },
         });
       }
 
@@ -207,7 +197,16 @@ export class OrderService {
       const totalInvested = Number(userBalance.total_invested);
       const totalPnl = Number(userBalance.total_pnl);
 
-      // 5.2. BUY → trừ tiền, tăng position
+      const portfolioKey = {
+        user_id_stock_symbol: {
+          user_id: userId,
+          stock_symbol: stockSymbol,
+        },
+      };
+
+      // =====================================
+      // BUY
+      // =====================================
       if (order.side === 'buy') {
         const cost = filledPriceNumber * filledQty + commissionNumber;
         const newAvailable = availableBalance - cost;
@@ -217,7 +216,7 @@ export class OrderService {
           throw new BadRequestException('Không đủ số dư để thực hiện lệnh mua');
         }
 
-        // Cập nhật UserBalance
+        // Update balance
         await tx.userBalance.update({
           where: { user_id: userId },
           data: {
@@ -226,21 +225,29 @@ export class OrderService {
           },
         });
 
-        // Cập nhật / Tạo UserPortfolio
-        const portfolioKey = {
-          user_id_stock_symbol: {
-            user_id: userId,
-            stock_symbol: stockSymbol,
-          },
-        };
-
-        const existingPortfolio = await tx.userPortfolio.findUnique({
+        // Upsert portfolio (đảm bảo luôn insert/update)
+        const before = await tx.userPortfolio.findUnique({
           where: portfolioKey,
+          select: { quantity: true, avg_price: true },
         });
 
-        if (existingPortfolio) {
-          const oldQty = existingPortfolio.quantity;
-          const oldAvg = Number(existingPortfolio.avg_price);
+        if (!before) {
+          // insert
+          await tx.userPortfolio.create({
+            data: {
+              user_id: userId,
+              stock_symbol: stockSymbol,
+              quantity: filledQty,
+              avg_price: new Prisma.Decimal(filledPriceNumber),
+              total_value: new Prisma.Decimal(filledPriceNumber * filledQty),
+              unrealized_pnl: new Prisma.Decimal(0),
+              updated_at: new Date(),
+            },
+          });
+        } else {
+          // update quantity + recompute weighted avg
+          const oldQty = before.quantity;
+          const oldAvg = Number(before.avg_price);
 
           const newQty = oldQty + filledQty;
           const newAvg =
@@ -259,53 +266,33 @@ export class OrderService {
               updated_at: new Date(),
             },
           });
-        } else {
-          const totalValue = filledPriceNumber * filledQty;
-          await tx.userPortfolio.create({
-            data: {
-              user_id: userId,
-              stock_symbol: stockSymbol,
-              quantity: filledQty,
-              avg_price: new Prisma.Decimal(filledPriceNumber),
-              total_value: new Prisma.Decimal(totalValue),
-              unrealized_pnl: new Prisma.Decimal(0), // tạm thời 0, sẽ update theo giá thị trường sau
-              updated_at: new Date(),
-            },
-          });
         }
+
+        return order;
       }
 
-      // 5.3. SELL → cộng tiền, giảm position, cập nhật realized PnL
+      // =====================================
+      // SELL
+      // =====================================
       if (order.side === 'sell') {
-        // Portfolio hiện tại phải có đủ cổ phiếu để bán
-        const portfolioKey = {
-          user_id_stock_symbol: {
-            user_id: userId,
-            stock_symbol: stockSymbol,
-          },
-        };
-
-        const existingPortfolio = await tx.userPortfolio.findUnique({
+        const existing = await tx.userPortfolio.findUnique({
           where: portfolioKey,
         });
 
-        if (!existingPortfolio || existingPortfolio.quantity < filledQty) {
+        if (!existing || existing.quantity < filledQty) {
           throw new BadRequestException('Không đủ cổ phiếu để bán');
         }
 
+        const avgPriceNumber = Number(existing.avg_price);
+
         const revenue = filledPriceNumber * filledQty - commissionNumber;
-        const avgPriceNumber = Number(existingPortfolio.avg_price);
+        const realizedPnl = (filledPriceNumber - avgPriceNumber) * filledQty;
 
-        const realizedPnl =
-          (filledPriceNumber - avgPriceNumber) * filledQty;
-
-        const newQty = existingPortfolio.quantity - filledQty;
         const newAvailable = availableBalance + revenue;
-        const newTotalInvested =
-          totalInvested - avgPriceNumber * filledQty;
+        const newTotalInvested = totalInvested - avgPriceNumber * filledQty;
         const newTotalPnl = totalPnl + realizedPnl;
 
-        // Cập nhật UserBalance
+        // Update balance
         await tx.userBalance.update({
           where: { user_id: userId },
           data: {
@@ -317,33 +304,49 @@ export class OrderService {
           },
         });
 
-        // Cập nhật UserPortfolio
-        if (newQty > 0) {
-          const newTotalValue = filledPriceNumber * newQty;
-          const newUnrealizedPnl = newTotalValue - avgPriceNumber * newQty;
+        // Atomic decrement (avoid race)
+        const dec = await tx.userPortfolio.updateMany({
+          where: {
+            user_id: userId,
+            stock_symbol: stockSymbol,
+            quantity: { gte: filledQty },
+          },
+          data: {
+            quantity: { decrement: filledQty },
+            updated_at: new Date(),
+          },
+        });
 
-          await tx.userPortfolio.update({
-            where: portfolioKey,
-            data: {
-              quantity: newQty,
-              // avg_price giữ nguyên (theo FIFO/AVG)
-              total_value: new Prisma.Decimal(newTotalValue),
-              unrealized_pnl: new Prisma.Decimal(newUnrealizedPnl),
-              updated_at: new Date(),
-            },
-          });
-        } else {
-          // Bán hết → set về 0, hoặc bạn có thể delete luôn record này
-          await tx.userPortfolio.update({
-            where: portfolioKey,
-            data: {
-              quantity: 0,
-              total_value: new Prisma.Decimal(0),
-              unrealized_pnl: new Prisma.Decimal(0),
-              updated_at: new Date(),
-            },
-          });
+        if (dec.count === 0) {
+          throw new BadRequestException('Không đủ cổ phiếu để bán (race)');
         }
+
+        const latest = await tx.userPortfolio.findUnique({
+          where: portfolioKey,
+        });
+
+        if (!latest) return order;
+
+        if (latest.quantity <= 0) {
+          // bán hết -> delete record cho sạch
+          await tx.userPortfolio.delete({ where: portfolioKey });
+          return order;
+        }
+
+        const newTotalValue = filledPriceNumber * latest.quantity;
+        const newUnrealizedPnl = newTotalValue - avgPriceNumber * latest.quantity;
+
+        await tx.userPortfolio.update({
+          where: portfolioKey,
+          data: {
+            // avg_price giữ nguyên (AVG cost)
+            total_value: new Prisma.Decimal(newTotalValue),
+            unrealized_pnl: new Prisma.Decimal(newUnrealizedPnl),
+            updated_at: new Date(),
+          },
+        });
+
+        return order;
       }
 
       return order;
@@ -351,16 +354,10 @@ export class OrderService {
   }
 
   /**
-   * Lấy danh sách order của 1 user (có phân trang + filter basic)
+   * Lấy danh sách order của 1 user (phân trang + filter)
    */
   async getUserOrders(userId: number, query: GetUserOrdersDto) {
-    const {
-      limit = 50,
-      offset = 0,
-      status,
-      sessionId,
-      stockSymbol,
-    } = query;
+    const { limit = 50, offset = 0, status, sessionId, stockSymbol } = query;
 
     const take = Number(limit) || 50;
     const skip = Number(offset) || 0;
@@ -394,5 +391,45 @@ export class OrderService {
         offset: skip,
       },
     };
+  }
+
+  /**
+   * (Tuỳ chọn) Hàm shares dùng cho POST /api/orders/shares
+   * Trả shares theo danh sách symbols
+   */
+  async getUserShares(inputUserId: number, stocks: string[]) {
+    const userId = Number(inputUserId);
+    if (!userId || userId <= 0) {
+      throw new BadRequestException('userId không hợp lệ');
+    }
+
+    if (!stocks || stocks.length === 0) {
+      return { userId, shares: {}, data: [] };
+    }
+
+    const symbols = Array.from(
+      new Set(stocks.map((s) => String(s).trim()).filter(Boolean)),
+    );
+
+    const rows = await this.prisma.userPortfolio.findMany({
+      where: {
+        user_id: userId,
+        stock_symbol: { in: symbols },
+      },
+      select: {
+        stock_symbol: true,
+        quantity: true,
+        avg_price: true,
+        total_value: true,
+        unrealized_pnl: true,
+        updated_at: true,
+      },
+    });
+
+    const shares: Record<string, number> = {};
+    for (const sym of symbols) shares[sym] = 0;
+    for (const r of rows) shares[r.stock_symbol] = r.quantity ?? 0;
+
+    return { userId, shares, data: rows };
   }
 }

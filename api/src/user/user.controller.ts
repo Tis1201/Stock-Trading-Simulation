@@ -31,7 +31,16 @@ export class UserController {
     return this.userService.findAll();
   }
 
-  @Get(':id')
+  @Get('detail')
+  findOneUser(@Req() req: any) {
+    const userId = req.user?.id ?? req.user?.sub; // tuỳ payload JWT, chỉnh lại nếu bạn dùng field khác
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.userService.findOne(Number(userId));
+  }
+
+  @Get('role/:id')
   @Public()
   findOne(@Param('id') id: string) {
     return this.userService.getRolePermissionByUserId(Number(id));

@@ -1,9 +1,9 @@
 ###GET HELLO
 GET http://localhost:3000
 
-###GET METRIC
+###GET Detail
 GET http://localhost:3001/api/user/me/balance
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsInJvbGUiOltdLCJwZXJtaXNzaW9uIjpbXSwiaWF0IjoxNzY1NDYzNjg0LCJleHAiOjE3NjU0NjQ1ODR9.GmbQR-vb-DlAaaxV1BDLWJClHxw7XS62FgWsA3azj4o
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsInJvbGUiOltdLCJwZXJtaXNzaW9uIjpbXSwiaWF0IjoxNzY1NTI1MjI2LCJleHAiOjE3NjYxMzAwMjZ9.wiTlKr5GSXVNU8EM4xRYi7rMXMxaEaF7VWLeST92YfM
 
 ###LOGIN
 POST http://localhost:3001/auth/login
@@ -28,11 +28,13 @@ Content-Type: application/json
 
 
 ### get user
-GET http://localhost:3000/api/user
+GET http://localhost:3001/api/user
 Content-Type: application/json
 
 ### get user by id
-GET http://localhost:3000/api/user/1
+GET http://localhost:3001/api/user/detail
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsInJvbGUiOltdLCJwZXJtaXNzaW9uIjpbXSwiaWF0IjoxNzY1NTE5NTA2LCJleHAiOjE3NjU1MjA0MDZ9.Pwtjo7GUQPODuumK5Y0JU9XkAAAe_gZdm6Gy5wlIMMM
+
 
 ### delete user
 DELETE http://localhost:3000/api/user/1

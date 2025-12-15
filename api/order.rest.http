@@ -2,14 +2,28 @@
 ### 1) Tạo lệnh đặt mua cổ phiếu (MARKET ORDER)
 POST http://localhost:3001/api/orders
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsInJvbGUiOltdLCJwZXJtaXNzaW9uIjpbXSwiaWF0IjoxNzY1NTI1MjI2LCJleHAiOjE3NjYxMzAwMjZ9.wiTlKr5GSXVNU8EM4xRYi7rMXMxaEaF7VWLeST92YfM
 
 {
   "stockSymbol": "FPT.VN",
-  "quantity": 100,
-  "orderType": "market",
-  "side": "buy"
+  "orderType": "limit",
+  "side": "buy",
+  "quantity": 10,
+  "price": 85000,
+  "status": "filled"
 }
+
 
 ### 2) Lấy danh sách lệnh của user (mặc định userId = 1)
 GET http://localhost:3001/api/orders?limit=20&offset=0
 Accept: application/json
+
+
+### GET SHARES
+POST http://localhost:3001/api/orders/shares
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsInJvbGUiOltdLCJwZXJtaXNzaW9uIjpbXSwiaWF0IjoxNzY1NTI1MjI2LCJleHAiOjE3NjYxMzAwMjZ9.wiTlKr5GSXVNU8EM4xRYi7rMXMxaEaF7VWLeST92YfM
+
+{
+  "stocks": ["VIC.VN", "FPT.VN", "VCB.VN"]
+}
